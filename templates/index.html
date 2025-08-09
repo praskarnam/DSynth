@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSynth - Synthetic Data Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-database me-2"></i>DSynth
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-info-circle me-1"></i>Synthetic Data Generation Portal
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-4 text-center mb-3">
+                    <i class="fas fa-magic text-primary"></i> DSynth
+                </h1>
+                <p class="lead text-center text-muted">
+                    Generate synthetic data from JSON and XML schemas with custom data types and MVEL expressions
+                </p>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-schema fa-2x text-primary mb-2"></i>
+                        <h5 class="card-title">Schemas</h5>
+                        <p class="card-text display-6" id="schema-count">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-cogs fa-2x text-success mb-2"></i>
+                        <h5 class="card-title">Custom Types</h5>
+                        <p class="card-text display-6" id="custom-type-count">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-download fa-2x text-info mb-2"></i>
+                        <h5 class="card-title">Data Generated</h5>
+                        <p class="card-text display-6" id="data-count">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Tabs -->
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="schemas-tab" data-bs-toggle="tab" data-bs-target="#schemas" type="button" role="tab">
+                    <i class="fas fa-schema me-2"></i>Schemas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="custom-types-tab" data-bs-toggle="tab" data-bs-target="#custom-types" type="button" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Custom Types
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#data" type="button" role="tab">
+                    <i class="fas fa-download me-2"></i>Data Generation
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="api-docs-tab" data-bs-toggle="tab" data-bs-target="#api-docs" type="button" role="tab">
+                    <i class="fas fa-code me-2"></i>API Documentation
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabsContent">
+            <!-- Schemas Tab -->
+            <div class="tab-pane fade show active" id="schemas" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Schema Management</h3>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#schemaModal">
+                        <i class="fas fa-plus me-2"></i>New Schema
+                    </button>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="schemaSearch" placeholder="Search schemas...">
+                    </div>
+                </div>
+                
+                <div id="schemasList"></div>
+            </div>
+
+            <!-- Custom Types Tab -->
+            <div class="tab-pane fade" id="custom-types" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Custom Data Types</h3>
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#customTypeModal">
+                        <i class="fas fa-plus me-2"></i>New Custom Type
+                    </button>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="customTypeSearch" placeholder="Search custom types...">
+                    </div>
+                </div>
+                
+                <div id="customTypesList"></div>
+            </div>
+
+            <!-- Data Generation Tab -->
+            <div class="tab-pane fade" id="data" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h3>Generate Data</h3>
+                        <div class="mb-3">
+                            <label for="dataSchemaSelect" class="form-label">Select Schema</label>
+                            <select class="form-select" id="dataSchemaSelect">
+                                <option value="">Choose a schema...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="dataCount" class="form-label">Record Count</label>
+                            <input type="number" class="form-control" id="dataCount" value="10" min="1" max="1000">
+                        </div>
+                        <div class="mb-3">
+                            <label for="dataSeed" class="form-label">Seed (optional)</label>
+                            <input type="number" class="form-control" id="dataSeed" placeholder="Leave empty for random">
+                        </div>
+                        <button class="btn btn-primary" id="generateDataBtn">
+                            <i class="fas fa-magic me-2"></i>Generate Data
+                        </button>
+                    </div>
+                    <div class="col-md-8">
+                        <h3>Generated Data</h3>
+                        <div class="mb-3">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-secondary" id="copyDataBtn">
+                                    <i class="fas fa-copy me-2"></i>Copy
+                                </button>
+                                <button class="btn btn-outline-secondary" id="downloadDataBtn">
+                                    <i class="fas fa-download me-2"></i>Download
+                                </button>
+                            </div>
+                        </div>
+                        <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                            <pre id="generatedData" class="mb-0">No data generated yet. Select a schema and click "Generate Data".</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- API Documentation Tab -->
+            <div class="tab-pane fade" id="api-docs" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <h3><i class="fas fa-code me-2"></i>REST API Documentation</h3>
+                        <p class="text-muted">Complete API reference for integrating DSynth with your applications.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-server me-2"></i>Base URL</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <code class="fs-5">http://localhost:8000</code>
+                                        <p class="text-muted mt-2">Adjust this URL for your deployment environment.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0"><i class="fas fa-key me-2"></i>Authentication</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-0">Currently no authentication required. All endpoints are publicly accessible.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Available Endpoints</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Method</th>
+                                                <th>Endpoint</th>
+                                                <th>Description</th>
+                                                <th>Example</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge bg-success">GET</span></td>
+                                                <td><code>/api/schemas</code></td>
+                                                <td>List all schemas</td>
+                                                <td><code>GET /api/schemas</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-primary">POST</span></td>
+                                                <td><code>/api/schemas</code></td>
+                                                <td>Create a new schema</td>
+                                                <td><code>POST /api/schemas</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-success">GET</span></td>
+                                                <td><code>/api/schemas/{id}</code></td>
+                                                <td>Get schema details</td>
+                                                <td><code>GET /api/schemas/abc123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-warning">PUT</span></td>
+                                                <td><code>/api/schemas/{id}</code></td>
+                                                <td>Update schema</td>
+                                                <td><code>PUT /api/schemas/abc123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-danger">DELETE</span></td>
+                                                <td><code>/api/schemas/{id}</code></td>
+                                                <td>Delete schema</td>
+                                                <td><code>DELETE /api/schemas/abc123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-success">GET</span></td>
+                                                <td><code>/api/schemas/{id}/elements</code></td>
+                                                <td>Get schema elements</td>
+                                                <td><code>GET /api/schemas/abc123/elements</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-primary">POST</span></td>
+                                                <td><code>/api/schemas/{id}/generate</code></td>
+                                                <td>Generate synthetic data</td>
+                                                <td><code>POST /api/schemas/abc123/generate</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-success">GET</span></td>
+                                                <td><code>/api/custom-types</code></td>
+                                                <td>List custom types</td>
+                                                <td><code>GET /api/custom-types</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge bg-primary">POST</span></td>
+                                                <td><code>/api/custom-types</code></td>
+                                                <td>Create custom type</td>
+                                                <td><code>POST /api/custom-types</code></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-code me-2"></i>Request/Response Examples</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-success">Generate Data Request</h6>
+                                        <pre class="bg-light p-3 rounded"><code>POST /api/schemas/{id}/generate
+Content-Type: application/json
+
+{
+  "count": 10,
+  "seed": 12345
+}</code></pre>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-info">Generate Data Response</h6>
+                                        <pre class="bg-light p-3 rounded"><code>{
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john.doe@example.com"
+    }
+  ],
+  "count": 10,
+  "seed": 12345
+}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-terminal me-2"></i>cURL Examples</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6>Generate 5 records from a schema:</h6>
+                                    <pre class="bg-dark text-light p-3 rounded"><code>curl -X POST "http://localhost:8000/api/schemas/abc123/generate" \
+  -H "Content-Type: application/json" \
+  -d '{"count": 5}'</code></pre>
+                                </div>
+                                <div class="mb-3">
+                                    <h6>Get schema details:</h6>
+                                    <pre class="bg-dark text-light p-3 rounded"><code>curl "http://localhost:8000/api/schemas/abc123"</code></pre>
+                                </div>
+                                <div class="mb-3">
+                                    <h6>Create a new schema:</h6>
+                                    <pre class="bg-dark text-light p-3 rounded"><code>curl -X POST "http://localhost:8000/api/schemas" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "User Schema",
+    "description": "User data schema",
+    "schema_type": "json",
+    "schema_content": "{\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"integer\"}}}"
+  }'</code></pre>
+                                </div>
+                                <div class="mb-3">
+                                    <h6>Create a custom type with MVEL expression:</h6>
+                                    <pre class="bg-dark text-light p-3 rounded"><code>curl -X POST "http://localhost:8000/api/custom-types" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Random Status",
+    "description": "Random status from predefined list",
+    "mvel_expression": "random.choice(['Active', 'Inactive', 'Pending', 'Completed'])"
+  }'</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- MVEL Expression Guide -->
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-magic me-2"></i>MVEL Expression Guide</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-3">MVEL (MVFLEX Expression Language) is used to define custom data generation logic for your fields.</p>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-success">Random Data Generators</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <code>random.choice(['A', 'B', 'C'])</code>
+                                                <small class="text-muted d-block">Selects random item from array</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>random.int(1, 100)</code>
+                                                <small class="text-muted d-block">Random integer between 1-100</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>random.float(0.0, 1.0)</code>
+                                                <small class="text-muted d-block">Random decimal between 0.0-1.0</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>random.boolean()</code>
+                                                <small class="text-muted d-block">Random true/false value</small>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <h6 class="text-info">Date & Time Generators</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <code>date.future(30)</code>
+                                                <small class="text-muted d-block">Date within next 30 days</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>date.past(365)</code>
+                                                <small class="text-muted d-block">Date within last 365 days</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>date.between('2020-01-01', '2023-12-31')</code>
+                                                <small class="text-muted d-block">Date between specified range</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>date.current()</code>
+                                                <small class="text-muted d-block">Current date and time</small>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <h6 class="text-warning">Text & String Generators</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <code>random.word()</code>
+                                                <small class="text-muted d-block">Random English word</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>random.sentence(5, 10)</code>
+                                                <small class="text-muted d-block">Sentence with 5-10 words</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>internet.email()</code>
+                                                <small class="text-muted d-block">Random email address</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>name.full_name()</code>
+                                                <small class="text-muted d-block">Random full name</small>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <h6 class="text-danger">Advanced Generators</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <code>random.uuid()</code>
+                                                <small class="text-muted d-block">Random UUID string</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>internet.ipv4()</code>
+                                                <small class="text-muted d-block">Random IPv4 address</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>phone.phone_number()</code>
+                                                <small class="text-muted d-block">Random phone number</small>
+                                            </li>
+                                            <li class="mb-2">
+                                                <code>finance.credit_card_number()</code>
+                                                <small class="text-muted d-block">Random credit card number</small>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-info mt-3 mb-0">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    <strong>Pro Tips:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Combine generators: <code>random.choice(['Mr.', 'Ms.', 'Dr.']) + ' ' + name.first_name()</code></li>
+                                        <li>Use conditional logic: <code>random.boolean() ? 'Active' : 'Inactive'</code></li>
+                                        <li>Create arrays: <code>[random.int(1,5), random.int(1,5), random.int(1,5)]</code></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schema Modal -->
+    <div class="modal fade" id="schemaModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="schemaModalTitle">New Schema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="schemaForm">
+                        <input type="hidden" id="schemaId">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="schemaName" class="form-label">Schema Name</label>
+                                    <input type="text" class="form-control" id="schemaName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="schemaType" class="form-label">Schema Type</label>
+                                    <select class="form-select" id="schemaType" required>
+                                        <option value="json">JSON Schema</option>
+                                        <option value="xml">XML Schema</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="schemaDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="schemaDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="schemaContent" class="form-label">Schema Content</label>
+                            <textarea class="form-control" id="schemaContent" rows="8" required></textarea>
+                            <div class="form-text">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="loadSampleSchema">
+                                    <i class="fas fa-file-code me-1"></i>Load Sample
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="seedCount" class="form-label">Default Record Count</label>
+                            <input type="number" class="form-control" id="seedCount" value="100" min="1" max="10000">
+                        </div>
+                        <div id="schemaFieldsContainer">
+                            <h6>Schema Fields</h6>
+                            <div id="schemaFields"></div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addFieldBtn">
+                                <i class="fas fa-plus me-1"></i>Add Field
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSchemaBtn">Save Schema</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Type Modal -->
+    <div class="modal fade" id="customTypeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customTypeModalTitle">New Custom Type</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="customTypeForm">
+                        <input type="hidden" id="customTypeId">
+                        <div class="mb-3">
+                            <label for="customTypeName" class="form-label">Type Name</label>
+                            <input type="text" class="form-control" id="customTypeName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customTypeDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="customTypeDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="mvelExpression" class="form-label">
+                                MVEL Expression
+                                <button type="button" class="btn btn-outline-info btn-sm ms-2" data-bs-toggle="collapse" data-bs-target="#mvelHelp" aria-expanded="false">
+                                    <i class="fas fa-question-circle me-1"></i>Help
+                                </button>
+                            </label>
+                            <textarea class="form-control" id="mvelExpression" rows="4" required placeholder="Enter MVEL expression for data generation"></textarea>
+                            
+                            <!-- MVEL Help Section -->
+                            <div class="collapse mt-2" id="mvelHelp">
+                                <div class="card card-body bg-light">
+                                    <h6 class="text-primary mb-3"><i class="fas fa-lightbulb me-2"></i>MVEL Expression Guide</h6>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="text-success">Random Data Generators</h6>
+                                            <div class="mb-2">
+                                                <strong>Random Choice:</strong>
+                                                <code class="d-block">random.choice(['A', 'B', 'C'])</code>
+                                                <small class="text-muted">Selects random item from array</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Random Integer:</strong>
+                                                <code class="d-block">random.int(1, 100)</code>
+                                                <small class="text-muted">Random number between 1-100</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Random Float:</strong>
+                                                <code class="d-block">random.float(0.0, 1.0)</code>
+                                                <small class="text-muted">Random decimal between 0.0-1.0</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Random Boolean:</strong>
+                                                <code class="d-block">random.boolean()</code>
+                                                <small class="text-muted">Random true/false value</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h6 class="text-info">Date & Time Generators</h6>
+                                            <div class="mb-2">
+                                                <strong>Future Date:</strong>
+                                                <code class="d-block">date.future(30)</code>
+                                                <small class="text-muted">Date within next 30 days</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Past Date:</strong>
+                                                <code class="d-block">date.past(365)</code>
+                                                <small class="text-muted">Date within last 365 days</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Between Dates:</strong>
+                                                <code class="d-block">date.between('2020-01-01', '2023-12-31')</code>
+                                                <small class="text-muted">Date between specified range</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Current Date:</strong>
+                                                <code class="d-block">date.current()</code>
+                                                <small class="text-muted">Current date and time</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h6 class="text-warning">Text & String Generators</h6>
+                                            <div class="mb-2">
+                                                <strong>Random Word:</strong>
+                                                <code class="d-block">random.word()</code>
+                                                <small class="text-muted">Random English word</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Random Sentence:</strong>
+                                                <code class="d-block">random.sentence(5, 10)</code>
+                                                <small class="text-muted">Sentence with 5-10 words</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Random Paragraph:</strong>
+                                                <code class="d-block">random.paragraph(3, 5)</code>
+                                                <small class="text-muted">Paragraph with 3-5 sentences</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Random Email:</strong>
+                                                <code class="d-block">internet.email()</code>
+                                                <small class="text-muted">Random email address</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h6 class="text-danger">Advanced Generators</h6>
+                                            <div class="mb-2">
+                                                <strong>UUID:</strong>
+                                                <code class="d-block">random.uuid()</code>
+                                                <small class="text-muted">Random UUID string</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>IP Address:</strong>
+                                                <code class="d-block">internet.ipv4()</code>
+                                                <small class="text-muted">Random IPv4 address</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Phone Number:</strong>
+                                                <code class="d-block">phone.phone_number()</code>
+                                                <small class="text-muted">Random phone number</small>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Credit Card:</strong>
+                                                <code class="d-block">finance.credit_card_number()</code>
+                                                <small class="text-muted">Random credit card number</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-info mt-3 mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Tip:</strong> You can combine multiple generators and use MVEL operators like <code>+</code>, <code>?</code>, and <code>[]</code> for complex expressions.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-text">
+                                <strong>Quick Examples:</strong> 
+                                <code>random.choice(['A', 'B', 'C'])</code>, 
+                                <code>random.int(1, 100)</code>, 
+                                <code>date.future(30)</code>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-outline-info btn-sm" id="testCustomTypeBtn">
+                                <i class="fas fa-play me-1"></i>Test Expression
+                            </button>
+                            <span id="testResult" class="ms-2"></span>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="saveCustomTypeBtn">Save Custom Type</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Field Modal -->
+    <div class="modal fade" id="fieldModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Configure Field</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="fieldForm">
+                        <input type="hidden" id="fieldIndex">
+                        <div class="mb-3">
+                            <label for="fieldName" class="form-label">Field Name</label>
+                            <select class="form-select" id="fieldName" required>
+                                <option value="">Select a schema element...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fieldDataType" class="form-label">Data Type</label>
+                            <select class="form-select" id="fieldDataType" required>
+                                <optgroup label="Built-in Types">
+                                    <option value="string">String</option>
+                                    <option value="integer">Integer</option>
+                                    <option value="float">Float</option>
+                                    <option value="boolean">Boolean</option>
+                                    <option value="date">Date</option>
+                                    <option value="datetime">DateTime</option>
+                                    <option value="email">Email</option>
+                                    <option value="phone">Phone</option>
+                                    <option value="name">Name</option>
+                                    <option value="address">Address</option>
+                                    <option value="city">City</option>
+                                    <option value="country">Country</option>
+                                    <option value="zipcode">ZIP Code</option>
+                                    <option value="company">Company</option>
+                                    <option value="job">Job</option>
+                                    <option value="url">URL</option>
+                                    <option value="ip_address">IP Address</option>
+                                    <option value="uuid">UUID</option>
+                                </optgroup>
+                                <optgroup label="Custom Types" id="customTypesOptions">
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="fieldRequired" class="form-label">Required</label>
+                                    <select class="form-select" id="fieldRequired">
+                                        <option value="true">Yes</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="fieldNullable" class="form-label">Nullable</label>
+                                    <select class="form-select" id="fieldNullable">
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fieldMvelExpression" class="form-label">MVEL Expression (optional)</label>
+                            <textarea class="form-control" id="fieldMvelExpression" rows="3" placeholder="Override default generation with MVEL expression"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fieldDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="fieldDescription" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveFieldBtn">Save Field</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then((registration) => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch((err) => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html> 

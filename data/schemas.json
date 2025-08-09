@@ -1,0 +1,43 @@
+[
+  {
+    "id": "6f328139-c547-4202-bfc5-f763aa48ccf3",
+    "name": "Test",
+    "description": "Test Schema",
+    "schema_type": "json",
+    "schema_content": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"id\": {\n      \"type\": \"integer\",\n      \"description\": \"Unique identifier\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"description\": \"Full name\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"format\": \"email\",\n      \"description\": \"Email address\"\n    },\n    \"age\": {\n      \"type\": \"integer\",\n      \"minimum\": 0,\n      \"maximum\": 120,\n      \"description\": \"Age in years\"\n    },\n    \"active\": {\n      \"type\": \"boolean\",\n      \"description\": \"Account status\"\n    }\n  },\n  \"required\": [\n    \"id\",\n    \"name\",\n    \"email\"\n  ]\n}",
+    "fields": [
+      {
+        "name": "id",
+        "data_type": "uuid",
+        "required": true,
+        "nullable": false,
+        "min_length": null,
+        "max_length": null,
+        "min_value": null,
+        "max_value": null,
+        "pattern": null,
+        "mvel_expression": null,
+        "custom_config": null,
+        "description": null
+      },
+      {
+        "name": "name",
+        "data_type": "name",
+        "required": true,
+        "nullable": false,
+        "min_length": null,
+        "max_length": null,
+        "min_value": null,
+        "max_value": null,
+        "pattern": null,
+        "mvel_expression": null,
+        "custom_config": null,
+        "description": null
+      }
+    ],
+    "seed_count": 10,
+    "created_at": null,
+    "updated_at": "2025-08-09T13:08:35.860784",
+    "is_active": true
+  }
+]
