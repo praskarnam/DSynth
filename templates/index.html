@@ -518,6 +518,83 @@ Content-Type: application/json
                                 <i class="fas fa-plus me-1"></i>Add Field
                             </button>
                         </div>
+                        
+                        <!-- Field Editor (Inline) -->
+                        <div id="fieldEditor" style="display: none;" class="card mt-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">Edit Field</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="fieldForm" onsubmit="return false;">
+                                    <input type="hidden" id="fieldIndex">
+                                    <div class="mb-3">
+                                        <label for="fieldName" class="form-label">Field Name</label>
+                                        <select class="form-select" id="fieldName" required>
+                                            <option value="">Select a schema element...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="fieldDataType" class="form-label">Data Type</label>
+                                        <select class="form-select" id="fieldDataType" required>
+                                            <optgroup label="Built-in Types">
+                                                <option value="string">String</option>
+                                                <option value="integer">Integer</option>
+                                                <option value="float">Float</option>
+                                                <option value="boolean">Boolean</option>
+                                                <option value="date">Date</option>
+                                                <option value="datetime">DateTime</option>
+                                                <option value="email">Email</option>
+                                                <option value="phone">Phone</option>
+                                                <option value="name">Name</option>
+                                                <option value="address">Address</option>
+                                                <option value="city">City</option>
+                                                <option value="country">Country</option>
+                                                <option value="zipcode">ZIP Code</option>
+                                                <option value="company">Company</option>
+                                                <option value="job">Job</option>
+                                                <option value="url">URL</option>
+                                                <option value="ip_address">IP Address</option>
+                                                <option value="uuid">UUID</option>
+                                            </optgroup>
+                                            <optgroup label="Custom Types" id="customTypesOptions">
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="fieldRequired" class="form-label">Required</label>
+                                                <select class="form-select" id="fieldRequired">
+                                                    <option value="true">Yes</option>
+                                                    <option value="false">No</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="fieldDescription" class="form-label">Nullable</label>
+                                                <select class="form-select" id="fieldNullable">
+                                                    <option value="false">No</option>
+                                                    <option value="true">Yes</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="fieldMvelExpression" class="form-label">MVEL Expression (optional)</label>
+                                        <textarea class="form-control" id="fieldMvelExpression" rows="3" placeholder="Override default generation with MVEL expression"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="fieldDescription" class="form-label">Description</label>
+                                        <textarea class="form-control" id="fieldDescription" rows="2"></textarea>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-primary" id="saveFieldBtn">Save Field</button>
+                                        <button type="button" class="btn btn-secondary" id="cancelFieldBtn">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -691,90 +768,18 @@ Content-Type: application/json
         </div>
     </div>
 
-    <!-- Field Modal -->
-    <div class="modal fade" id="fieldModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Configure Field</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="fieldForm">
-                        <input type="hidden" id="fieldIndex">
-                        <div class="mb-3">
-                            <label for="fieldName" class="form-label">Field Name</label>
-                            <select class="form-select" id="fieldName" required>
-                                <option value="">Select a schema element...</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="fieldDataType" class="form-label">Data Type</label>
-                            <select class="form-select" id="fieldDataType" required>
-                                <optgroup label="Built-in Types">
-                                    <option value="string">String</option>
-                                    <option value="integer">Integer</option>
-                                    <option value="float">Float</option>
-                                    <option value="boolean">Boolean</option>
-                                    <option value="date">Date</option>
-                                    <option value="datetime">DateTime</option>
-                                    <option value="email">Email</option>
-                                    <option value="phone">Phone</option>
-                                    <option value="name">Name</option>
-                                    <option value="address">Address</option>
-                                    <option value="city">City</option>
-                                    <option value="country">Country</option>
-                                    <option value="zipcode">ZIP Code</option>
-                                    <option value="company">Company</option>
-                                    <option value="job">Job</option>
-                                    <option value="url">URL</option>
-                                    <option value="ip_address">IP Address</option>
-                                    <option value="uuid">UUID</option>
-                                </optgroup>
-                                <optgroup label="Custom Types" id="customTypesOptions">
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="fieldRequired" class="form-label">Required</label>
-                                    <select class="form-select" id="fieldRequired">
-                                        <option value="true">Yes</option>
-                                        <option value="false">No</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="fieldNullable" class="form-label">Nullable</label>
-                                    <select class="form-select" id="fieldNullable">
-                                        <option value="false">No</option>
-                                        <option value="true">Yes</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="fieldMvelExpression" class="form-label">MVEL Expression (optional)</label>
-                            <textarea class="form-control" id="fieldMvelExpression" rows="3" placeholder="Override default generation with MVEL expression"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="fieldDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="fieldDescription" rows="2"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="saveFieldBtn">Save Field</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/app.js"></script>
+    
+    <!-- Initialize DSynth App -->
+    <script>
+        // Initialize the DSynth application after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            window.app = new DSynthApp();
+        });
+    </script>
     
     <!-- Service Worker Registration -->
     <script>

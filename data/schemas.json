@@ -22,7 +22,7 @@
       },
       {
         "name": "name",
-        "data_type": "name",
+        "data_type": "tt",
         "required": true,
         "nullable": false,
         "min_length": null,
@@ -37,7 +37,7 @@
     ],
     "seed_count": 10,
     "created_at": null,
-    "updated_at": "2025-08-09T13:08:35.860784",
+    "updated_at": "2025-08-09T15:06:01.626896",
     "is_active": true
   }
 ]

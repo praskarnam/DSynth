@@ -27,7 +27,9 @@ class DSynthApp {
         
         // Field management
         document.getElementById('saveFieldBtn').addEventListener('click', () => this.saveField());
-        document.getElementById('fieldName').addEventListener('change', (e) => this.onFieldNameChange(e));
+        document.getElementById('cancelFieldBtn').addEventListener('click', () => this.cancelFieldEdit());
+        document.getElementById('addFieldBtn').addEventListener('click', () => this.editField(-1)); // -1 indicates new field
+        // Note: fieldName event binding is handled in editField method
         
         // Data generation
         document.getElementById('generateDataBtn').addEventListener('click', () => this.generateData());
@@ -41,23 +43,44 @@ class DSynthApp {
         // Modal events
         document.getElementById('schemaModal').addEventListener('show.bs.modal', (e) => this.onSchemaModalShow(e));
         document.getElementById('customTypeModal').addEventListener('show.bs.modal', (e) => this.onCustomTypeModalShow(e));
-        document.getElementById('fieldModal').addEventListener('show.bs.modal', (e) => this.onFieldModalShow(e));
+        
+        // New Schema button (using event delegation since it's dynamically added)
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('[data-bs-target="#schemaModal"]')) {
+                this.newSchema();
+            }
+            if (e.target.closest('[data-bs-target="#customTypeModal"]')) {
+                this.newCustomType();
+            }
+        });
+        
+
     }
 
     async loadData() {
         try {
+            console.log('Loading data...');
+            
             // Load schemas
             const schemasResponse = await fetch('/api/schemas');
             this.schemas = await schemasResponse.json();
+            console.log('Schemas loaded:', this.schemas);
             this.renderSchemas();
             
             // Load custom types
             const customTypesResponse = await fetch('/api/custom-types');
             this.customTypes = await customTypesResponse.json();
+            console.log('Custom types loaded:', this.customTypes);
             this.renderCustomTypes();
+            
+            // Populate custom types in field data type dropdown
+            this.populateCustomTypesDropdown();
             
             // Update schema select for data generation
             this.updateSchemaSelect();
+            
+            // Update dashboard counts
+            this.updateCounts();
             
         } catch (error) {
             console.error('Error loading data:', error);
@@ -66,9 +89,32 @@ class DSynthApp {
     }
 
     updateCounts() {
-        document.getElementById('schema-count').textContent = this.schemas.length;
-        document.getElementById('custom-type-count').textContent = this.customTypes.length;
-        document.getElementById('data-count').textContent = '0';
+        console.log('Updating counts:', {
+            schemas: this.schemas.length,
+            customTypes: this.customTypes.length
+        });
+        
+        const schemaCountElement = document.getElementById('schema-count');
+        const customTypeCountElement = document.getElementById('custom-type-count');
+        const dataCountElement = document.getElementById('data-count');
+        
+        if (schemaCountElement) {
+            schemaCountElement.textContent = this.schemas.length;
+        } else {
+            console.error('schema-count element not found');
+        }
+        
+        if (customTypeCountElement) {
+            customTypeCountElement.textContent = this.customTypes.length;
+        } else {
+            console.error('custom-type-count element not found');
+        }
+        
+        if (dataCountElement) {
+            dataCountElement.textContent = '0';
+        } else {
+            console.error('data-count element not found');
+        }
     }
 
     // Schema Management
@@ -256,6 +302,19 @@ class DSynthApp {
     }
 
     getSchemaFields() {
+        // Use the actual field data from currentSchema instead of extracting from HTML
+        if (this.currentSchema && this.currentSchema.fields) {
+            return this.currentSchema.fields.map(field => ({
+                name: field.name,
+                data_type: field.data_type,
+                required: field.required,
+                nullable: field.nullable,
+                mvel_expression: field.mvel_expression,
+                description: field.description
+            }));
+        }
+        
+        // Fallback to HTML extraction if no currentSchema (shouldn't happen)
         const fields = [];
         const fieldElements = document.querySelectorAll('#schemaFields .field-item');
         
@@ -273,6 +332,22 @@ class DSynthApp {
         });
         
         return fields;
+    }
+
+    newSchema() {
+        // Clear current schema and prepare for new schema creation
+        this.currentSchema = null;
+        this.currentFieldIndex = null;
+        
+        // Reset form fields
+        document.getElementById('schemaModalTitle').textContent = 'New Schema';
+        document.getElementById('schemaId').value = '';
+        document.getElementById('schemaName').value = '';
+        document.getElementById('schemaDescription').value = '';
+        document.getElementById('schemaType').value = 'json';
+        document.getElementById('schemaContent').value = '';
+        document.getElementById('seedCount').value = '100';
+        document.getElementById('schemaFields').innerHTML = '';
     }
 
     editSchema(schemaId) {
@@ -406,6 +481,18 @@ class DSynthApp {
         };
     }
 
+    newCustomType() {
+        // Clear current custom type and prepare for new type creation
+        this.currentCustomType = null;
+        
+        // Reset form fields
+        document.getElementById('customTypeModalTitle').textContent = 'New Custom Type';
+        document.getElementById('customTypeId').value = '';
+        document.getElementById('customTypeName').value = '';
+        document.getElementById('customTypeDescription').value = '';
+        document.getElementById('mvelExpression').value = '';
+    }
+
     editCustomType(typeId) {
         const customType = this.customTypes.find(t => t.id === typeId);
         if (!customType) return;
@@ -454,40 +541,93 @@ class DSynthApp {
         }
     }
 
-    // Field Management
-    async showFieldModal() {
-        this.currentFieldIndex = null;
-        this.clearFieldForm();
-        
-        // Load schema elements for the dropdown
-        if (this.currentSchema && this.currentSchema.id) {
-            await this.loadSchemaElements();
-        }
-        
-        const modal = new bootstrap.Modal(document.getElementById('fieldModal'));
-        modal.show();
-    }
+
 
     async editField(index) {
-        this.currentFieldIndex = index;
-        const field = this.currentSchema.fields[index];
-        
-        // Load schema elements for the dropdown
-        if (this.currentSchema && this.currentSchema.id) {
-            await this.loadSchemaElements();
+        try {
+            console.log('editField called with index:', index);
+            console.log('currentSchema:', this.currentSchema);
+            
+            if (!this.currentSchema) {
+                this.showAlert('No schema selected. Please edit a schema first.', 'danger');
+                return;
+            }
+            
+            this.currentFieldIndex = index;
+            
+            // Check if fieldEditor exists
+            const fieldEditor = document.getElementById('fieldEditor');
+            if (!fieldEditor) {
+                this.showAlert('Field editor not found. Please refresh the page.', 'danger');
+                return;
+            }
+            
+            // Load schema elements for the dropdown
+            if (this.currentSchema && this.currentSchema.id) {
+                console.log('Loading schema elements...');
+                await this.loadSchemaElements();
+            }
+            
+            // Update custom types dropdown
+            this.populateCustomTypesDropdown();
+            
+            if (index === -1) {
+                // New field
+                console.log('Creating new field');
+                this.clearFieldForm();
+            } else {
+                // Edit existing field
+                const field = this.currentSchema.fields[index];
+                console.log('Field to edit:', field);
+                
+                if (!field) {
+                    this.showAlert('Field not found', 'danger');
+                    return;
+                }
+                
+                this.populateFieldForm(field);
+                console.log('Field form populated');
+            }
+            
+            // Bind the field name change event
+            const fieldNameSelect = document.getElementById('fieldName');
+            if (fieldNameSelect) {
+                // Remove any existing event listeners first
+                fieldNameSelect.removeEventListener('change', this.onFieldNameChange);
+                // Add the event listener
+                fieldNameSelect.addEventListener('change', this.onFieldNameChange.bind(this));
+                console.log('Field name change event bound successfully');
+            }
+            
+            // Show the inline field editor
+            fieldEditor.style.display = 'block';
+            console.log('Field editor should be visible now');
+            
+            // Scroll to the field editor
+            fieldEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } catch (error) {
+            console.error('Error editing field:', error);
+            this.showAlert('Error editing field. Please try again.', 'danger');
         }
-        
-        this.populateFieldForm(field);
-        const modal = new bootstrap.Modal(document.getElementById('fieldModal'));
-        modal.show();
     }
 
     async loadSchemaElements() {
         try {
+            if (!this.currentSchema || !this.currentSchema.id) {
+                console.warn('No current schema or schema ID for loading elements');
+                return;
+            }
+            
             const response = await fetch(`/api/schemas/${this.currentSchema.id}/elements`);
+            
             if (response.ok) {
                 const data = await response.json();
-                this.populateFieldNameDropdown(data.elements);
+                if (data && data.elements) {
+                    this.populateFieldNameDropdown(data.elements);
+                } else {
+                    console.warn('No elements data received from API');
+                }
             } else {
                 console.error('Error loading schema elements:', response.statusText);
             }
@@ -497,18 +637,73 @@ class DSynthApp {
     }
 
     populateFieldNameDropdown(elements) {
-        const dropdown = document.getElementById('fieldName');
-        dropdown.innerHTML = '<option value="">Select a schema element...</option>';
-        
-        elements.forEach(element => {
-            const option = document.createElement('option');
-            option.value = element.name;
-            option.textContent = `${element.name} (${element.type})`;
-            option.dataset.elementType = element.type;
-            option.dataset.required = element.required;
-            option.dataset.description = element.description || '';
-            dropdown.appendChild(option);
-        });
+        try {
+            const dropdown = document.getElementById('fieldName');
+            if (!dropdown) {
+                console.error('Field name dropdown not found!');
+                return;
+            }
+            
+            if (!Array.isArray(elements)) {
+                console.warn('Elements is not an array:', elements);
+                return;
+            }
+            
+            dropdown.innerHTML = '<option value="">Select a schema element...</option>';
+            
+            elements.forEach(element => {
+                if (element && element.name) {
+                    const option = document.createElement('option');
+                    option.value = element.name;
+                    option.textContent = `${element.name} (${element.type || 'unknown'})`;
+                    option.dataset.elementType = element.type || '';
+                    option.dataset.required = element.required || false;
+                    option.dataset.description = element.description || '';
+                    dropdown.appendChild(option);
+                }
+            });
+        } catch (error) {
+            console.error('Error populating field name dropdown:', error);
+        }
+    }
+
+    populateCustomTypesDropdown() {
+        try {
+            const customTypesOptgroup = document.getElementById('customTypesOptions');
+            if (!customTypesOptgroup) {
+                console.error('Custom types optgroup not found!');
+                return;
+            }
+            
+            // Clear existing custom types
+            customTypesOptgroup.innerHTML = '';
+            
+            console.log('DEBUG: Available custom types:', this.customTypes);
+            
+            // Add custom types to the dropdown
+            this.customTypes.forEach(customType => {
+                if (customType && customType.name) {
+                    const option = document.createElement('option');
+                    option.value = customType.name;
+                    option.textContent = customType.name;
+                    option.dataset.description = customType.description || '';
+                    customTypesOptgroup.appendChild(option);
+                    
+                    console.log(`DEBUG: Added custom type option: value="${customType.name}", text="${customType.name}"`);
+                }
+            });
+            
+            console.log(`Populated ${this.customTypes.length} custom types in dropdown`);
+            
+            // Log all options in the dropdown for debugging
+            const allOptions = document.querySelectorAll('#fieldDataType option');
+            console.log('DEBUG: All options in fieldDataType dropdown:');
+            allOptions.forEach((opt, index) => {
+                console.log(`  ${index}: value="${opt.value}", text="${opt.textContent}"`);
+            });
+        } catch (error) {
+            console.error('Error populating custom types dropdown:', error);
+        }
     }
 
     onFieldNameChange(event) {
@@ -558,36 +753,72 @@ class DSynthApp {
     }
 
     populateFieldForm(field) {
-        // Set the field name dropdown value
-        const fieldNameSelect = document.getElementById('fieldName');
-        const option = Array.from(fieldNameSelect.options).find(opt => opt.value === field.name);
-        if (option) {
-            fieldNameSelect.value = field.name;
+        try {
+            // Set the field name dropdown value
+            const fieldNameSelect = document.getElementById('fieldName');
+            if (!fieldNameSelect) {
+                console.error('Field name select not found!');
+                return;
+            }
+            
+            const option = Array.from(fieldNameSelect.options).find(opt => opt.value === field.name);
+            if (option) {
+                fieldNameSelect.value = field.name;
+            } else {
+                console.warn('Field name option not found in dropdown for:', field.name);
+            }
+            
+            // Set other form fields
+            const dataTypeField = document.getElementById('fieldDataType');
+            const requiredField = document.getElementById('fieldRequired');
+            const nullableField = document.getElementById('fieldNullable');
+            const mvelField = document.getElementById('fieldMvelExpression');
+            const descriptionField = document.getElementById('fieldDescription');
+            
+            if (dataTypeField) dataTypeField.value = field.data_type;
+            if (requiredField) requiredField.value = field.required.toString();
+            if (nullableField) nullableField.value = field.nullable.toString();
+            if (mvelField) mvelField.value = field.mvel_expression || '';
+            if (descriptionField) descriptionField.value = field.description || '';
+        } catch (error) {
+            console.error('Error populating field form:', error);
         }
-        
-        document.getElementById('fieldDataType').value = field.data_type;
-        document.getElementById('fieldRequired').value = field.required.toString();
-        document.getElementById('fieldNullable').value = field.nullable.toString();
-        document.getElementById('fieldMvelExpression').value = field.mvel_expression || '';
-        document.getElementById('fieldDescription').value = field.description || '';
     }
 
     saveField() {
+        const fieldName = document.getElementById('fieldName').value;
+        const fieldDataType = document.getElementById('fieldDataType').value;
+        const fieldRequired = document.getElementById('fieldRequired').value;
+        const fieldNullable = document.getElementById('fieldNullable').value;
+        const fieldMvelExpression = document.getElementById('fieldMvelExpression').value;
+        const fieldDescription = document.getElementById('fieldDescription').value;
+        
+        console.log('DEBUG: saveField - Form field values:', {
+            fieldName,
+            fieldDataType,
+            fieldRequired,
+            fieldNullable,
+            fieldMvelExpression,
+            fieldDescription
+        });
+        
         const fieldData = {
-            name: document.getElementById('fieldName').value,
-            data_type: document.getElementById('fieldDataType').value,
-            required: document.getElementById('fieldRequired').value === 'true',
-            nullable: document.getElementById('fieldNullable').value === 'true',
-            mvel_expression: document.getElementById('fieldMvelExpression').value || null,
-            description: document.getElementById('fieldDescription').value || null
+            name: fieldName,
+            data_type: fieldDataType,
+            required: fieldRequired === 'true',
+            nullable: fieldNullable === 'true',
+            mvel_expression: fieldMvelExpression || null,
+            description: fieldDescription || null
         };
+        
+        console.log('DEBUG: saveField - Final fieldData:', fieldData);
 
         if (!fieldData.name) {
             this.showAlert('Field name is required', 'danger');
             return;
         }
 
-        if (this.currentFieldIndex !== null) {
+        if (this.currentFieldIndex >= 0) {
             // Edit existing field
             this.currentSchema.fields[this.currentFieldIndex] = fieldData;
         } else {
@@ -596,7 +827,17 @@ class DSynthApp {
         }
 
         this.renderSchemaFields(this.currentSchema.fields);
-        bootstrap.Modal.getInstance(document.getElementById('fieldModal')).hide();
+        
+        // Clear the form
+        this.clearFieldForm();
+        
+        // Hide the field editor
+        const fieldEditor = document.getElementById('fieldEditor');
+        if (fieldEditor) {
+            fieldEditor.style.display = 'none';
+        }
+        
+        this.showAlert('Field saved successfully!', 'success');
     }
 
     renderSchemaFields(fields) {
@@ -608,16 +849,22 @@ class DSynthApp {
                     <p class="field-type">${field.data_type} ${field.required ? '(required)' : '(optional)'}</p>
                 </div>
                 <div class="field-actions">
-                    <button class="btn btn-sm btn-outline-primary" onclick="app.editField(${index})">
+                    <button class="btn btn-sm btn-outline-primary edit-field-btn" data-field-index="${index}" onclick="window.app.editField(${index})">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="app.removeField(${index})">
+                    <button class="btn btn-sm btn-outline-danger remove-field-btn" data-field-index="${index}" onclick="window.app.removeField(${index})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </div>
         `).join('');
+        
+        console.log('Schema fields rendered with inline onclick handlers');
     }
+    
+
+    
+
 
     removeField(index) {
         if (confirm('Are you sure you want to remove this field?')) {
@@ -632,6 +879,8 @@ class DSynthApp {
         const count = parseInt(document.getElementById('dataCount').value);
         const seed = document.getElementById('dataSeed').value;
 
+        console.log('DEBUG: generateData called with:', { schemaId, count, seed });
+
         if (!schemaId) {
             this.showAlert('Please select a schema', 'danger');
             return;
@@ -641,22 +890,30 @@ class DSynthApp {
             document.getElementById('generateDataBtn').disabled = true;
             document.getElementById('generateDataBtn').innerHTML = '<span class="loading"></span> Generating...';
 
+            const requestBody = { count, seed: seed ? parseInt(seed) : null };
+            console.log('DEBUG: Sending request to /api/schemas/${schemaId}/generate with body:', requestBody);
+
             const response = await fetch(`/api/schemas/${schemaId}/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ count, seed: seed ? parseInt(seed) : null })
+                body: JSON.stringify(requestBody)
             });
+
+            console.log('DEBUG: Response status:', response.status);
+            console.log('DEBUG: Response ok:', response.ok);
 
             if (response.ok) {
                 const result = await response.json();
+                console.log('DEBUG: Response data:', result);
                 this.displayGeneratedData(result.data);
                 document.getElementById('data-count').textContent = result.count;
             } else {
                 const error = await response.json();
+                console.error('DEBUG: Error response:', error);
                 this.showAlert(`Error generating data: ${error.detail}`, 'danger');
             }
         } catch (error) {
-            console.error('Error generating data:', error);
+            console.error('DEBUG: Exception in generateData:', error);
             this.showAlert('Error generating data', 'danger');
         } finally {
             document.getElementById('generateDataBtn').disabled = false;
@@ -801,36 +1058,48 @@ class DSynthApp {
 
     // Modal event handlers
     onSchemaModalShow(event) {
-        if (!this.currentSchema) {
-            // New schema
-            document.getElementById('schemaModalTitle').textContent = 'New Schema';
-            document.getElementById('schemaId').value = '';
-            document.getElementById('schemaName').value = '';
-            document.getElementById('schemaDescription').value = '';
-            document.getElementById('schemaType').value = 'json';
-            document.getElementById('schemaContent').value = '';
-            document.getElementById('seedCount').value = '100';
-            document.getElementById('schemaFields').innerHTML = '';
+        try {
+            console.log('onSchemaModalShow called');
+            // This method is called when the schema modal is shown
+            // The actual form population is handled by editSchema() method
+            // We don't need to clear the form here as it's managed by the calling methods
+            
+            // No need to bind field events since we're using inline onclick handlers
+            console.log('Field events not needed - using inline onclick handlers');
+        } catch (error) {
+            console.error('Error in onSchemaModalShow:', error);
         }
     }
 
     onCustomTypeModalShow(event) {
-        if (!this.currentCustomType) {
-            // New custom type
-            document.getElementById('customTypeModalTitle').textContent = 'New Custom Type';
-            document.getElementById('customTypeId').value = '';
-            document.getElementById('customTypeName').value = '';
-            document.getElementById('customTypeDescription').value = '';
-            document.getElementById('mvelExpression').value = '';
+        try {
+            if (!this.currentCustomType) {
+                // New custom type
+                document.getElementById('customTypeModalTitle').textContent = 'New Custom Type';
+                document.getElementById('customTypeId').value = '';
+                document.getElementById('customTypeName').value = '';
+                document.getElementById('customTypeDescription').value = '';
+                document.getElementById('mvelExpression').value = '';
+            }
+        } catch (error) {
+            console.error('Error in onCustomTypeModalShow:', error);
         }
     }
 
-    onFieldModalShow(event) {
-        // Field modal is handled by showFieldModal and editField methods
+
+    
+    cancelFieldEdit() {
+        try {
+            console.log('cancelFieldEdit called');
+            const fieldEditor = document.getElementById('fieldEditor');
+            if (fieldEditor) {
+                fieldEditor.style.display = 'none';
+                console.log('Field editor hidden');
+            }
+        } catch (error) {
+            console.error('Error canceling field edit:', error);
+        }
     }
 }
 
-// Initialize the application when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new DSynthApp();
-}); 
+// App initialization is now handled in the HTML template 

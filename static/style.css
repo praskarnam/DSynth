@@ -613,4 +613,33 @@ body {
     #mvelHelp .card-body {
         padding: 0.75rem;
     }
+}
+
+/* Field Editor Styles */
+#fieldEditor {
+    border: 2px solid #0d6efd;
+    box-shadow: 0 0.5rem 1rem rgba(13, 110, 253, 0.15);
+    animation: slideIn 0.3s ease-out;
+}
+
+#fieldEditor .card-header {
+    background-color: #0d6efd;
+    color: white;
+    border-bottom: none;
+}
+
+#fieldEditor .card-header h6 {
+    margin: 0;
+    font-weight: 600;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 } 

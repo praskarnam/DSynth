@@ -124,11 +124,27 @@ async def delete_schema(schema_id: str):
 @app.post("/api/schemas/{schema_id}/generate")
 async def generate_data(schema_id: str, request: DataGenerationRequest):
     """Generate data based on schema configuration"""
+    print(f"DEBUG: generate_data called for schema_id: {schema_id}")
     schema = storage.get_schema(schema_id)
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
     
+    print(f"DEBUG: Found schema: {schema.name}")
+    print(f"DEBUG: Schema fields: {schema.fields}")
+    
     try:
+        # Load custom types into the data generator
+        data_generator.clear_custom_types()
+        custom_types = storage.get_all_custom_types()
+        print(f"DEBUG: Found {len(custom_types)} custom types in storage")
+        for custom_type in custom_types:
+            print(f"DEBUG: Adding custom type: {custom_type.name} with MVEL: {custom_type.mvel_expression}")
+            data_generator.add_custom_type(custom_type)
+        
+        # Set seed if provided
+        if request.seed is not None:
+            data_generator.set_seed(request.seed)
+        
         data = data_generator.generate_data(schema, request.count)
         return {"data": data, "count": len(data)}
     except Exception as e:
@@ -147,6 +163,12 @@ async def get_data(
         raise HTTPException(status_code=404, detail="Schema not found")
     
     try:
+        # Load custom types into the data generator
+        data_generator.clear_custom_types()
+        custom_types = storage.get_all_custom_types()
+        for custom_type in custom_types:
+            data_generator.add_custom_type(custom_type)
+        
         # Set seed if provided
         if seed is not None:
             random.seed(seed)
@@ -182,6 +204,12 @@ async def create_custom_type(custom_type: CustomDataType):
     
     # Test the custom type
     try:
+        # Load existing custom types into the data generator
+        data_generator.clear_custom_types()
+        existing_custom_types = storage.get_all_custom_types()
+        for existing_type in existing_custom_types:
+            data_generator.add_custom_type(existing_type)
+        
         test_data = data_generator.test_custom_type(custom_type)
         custom_type.test_result = {"success": True, "sample_data": test_data}
     except Exception as e:
@@ -215,6 +243,12 @@ async def update_custom_type(type_id: str, custom_type: CustomDataType):
     
     # Test the custom type
     try:
+        # Load existing custom types into the data generator
+        data_generator.clear_custom_types()
+        existing_custom_types = storage.get_all_custom_types()
+        for existing_type in existing_custom_types:
+            data_generator.add_custom_type(existing_type)
+        
         test_data = data_generator.test_custom_type(custom_type)
         custom_type.test_result = {"success": True, "sample_data": test_data}
     except Exception as e:
@@ -240,6 +274,12 @@ async def test_custom_type(type_id: str):
         raise HTTPException(status_code=404, detail="Custom type not found")
     
     try:
+        # Load existing custom types into the data generator
+        data_generator.clear_custom_types()
+        existing_custom_types = storage.get_all_custom_types()
+        for existing_type in existing_custom_types:
+            data_generator.add_custom_type(existing_type)
+        
         test_data = data_generator.test_custom_type(custom_type)
         return {"success": True, "sample_data": test_data}
     except Exception as e:

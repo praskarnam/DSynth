@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "e96a4718-8b9d-449d-a722-91de41181565",
+    "name": "Test Type",
+    "description": "",
+    "mvel_expression": "random.choice(['A', 'B', 'C']), random.int(1, 100), date.future(30)",
+    "validation_rules": null,
+    "created_at": "2025-08-09T13:58:24.684437",
+    "test_result": {
+      "success": true,
+      "sample_data": true
+    },
+    "is_active": true
+  },
+  {
+    "id": "e903676e-31f4-4c76-bf44-9c6c5f15abf8",
+    "name": "tt",
+    "description": "",
+    "mvel_expression": "random.choice(['A', 'B', 'C']), random.int(1, 100), date.future(30)",
+    "validation_rules": null,
+    "created_at": "2025-08-09T15:05:34.235113",
+    "test_result": {
+      "success": true,
+      "sample_data": true
+    },
+    "is_active": true
+  }
+]
